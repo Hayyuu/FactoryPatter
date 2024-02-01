@@ -1,3 +1,16 @@
+
+let running=false;
+let isdraw=false;
+const player1={
+    name:"One",
+    token:"1"
+}
+const player2={
+    name:"Two",
+    token:"2"
+}
+let activePlayer=player2;
+
 const gameBoard=(function(){
     let board=[];
     const row=3;
@@ -11,93 +24,122 @@ const gameBoard=(function(){
     }
    
     const getboard=function(){return {board};}
-    const addToken=function(token,board,row,col){
+    const addToken=function(token,row,col){
         console.log("inside addtoken"+token);
-        board.board.forEach((element,index,arr)=>{
-
-            let innerElement=element.map((item,innerIndex,innerArray)=>{
-                if(row==index && col==innerIndex){
-                    arr[index][innerIndex]=token;
-                }
-                return arr;
-            }
-            );
-          return innerElement;
-            
-            
-        });
-       return board;
+        board[row][col]=token;
       
+    }
+    const setboard=function(newBoard){
+          board=newBoard;
     }
     const printBoard=function(){
         console.log(getboard());
     }
     console.log(getboard());
-    return {getboard,addToken,printBoard}
+    return {board,setboard,getboard,addToken,printBoard}
 })();
 
  
 
  const Game=function(){
-   
-    const player1={
-        name:"One",
-        token:"1"
-    }
-    const player2={
-        name:"Two",
-        token:"2"
-    }
-    let activePlayer=player1;
-    let activePlayerToken=player1.token;
-    let game_board=gameBoard.getboard();
-    const getPlayerName=function(player){ return player.name}
-    const getPlayerToken=function(player){
-        return player.token;
+    running=true;
+    let game_board=gameBoard;
+    let winner="";
+    const setActivePlayer=(player)=>{
+         activePlayer=player;
     }
     const switchPlayerTurn=function(){
-        activePlayer=activePlayer===player1?player2:player1;    
+        activePlayer=(activePlayer==player1)?player2:player1;
+        return activePlayer;
     }
     const getActivePlayer=function(){
         return activePlayer;
     }
     let printPlayRound=function(){
-        gameBoard.printBoard();
-        console.log(`${getPlayerName(activePlayer)}'s Turn`);
+        game_board.printBoard();
+        console.log(`${activePlayer.name}'s Turn`);
     }
     let play=function(row,col){
-        gameBoard.addToken(activePlayerToken,game_board,row,col);
-        updateScreen();
-        // if(endGame){return;}
-        switchPlayerTurn();
+        console.log("inside play");
+        if(game_board.board[row][col]!=0 || !running){
+            return;
+        }
+        game_board.addToken(activePlayer.token,row,col);
+        checkWinner();
         printPlayRound();
-       
     }
-    return {play,game_board,printPlayRound};
+    let checkWinner=function(){
+        let roundWon=false;
+        let msg="";
+                game_board.board.forEach((element,index,arr)=>{
+                    if(arr[index].every((x)=>x==arr[index][0] && x!=0)){
+                        msg="row tie";
+                        roundWon=true;
+                        return;
+                    }
+                    
+                    if(arr.every(x=>x[index]==arr[0][index] && x[index]!=0)){
+                     msg="col tie";
+                     roundWon=true;
+                     return;
+                    }
+                    if(arr.every(innerArray=>innerArray.every(el=>el!==0))){
+                        msg="Its a draw";
+                        isdraw=true;
+                        return;
+                    }
+                    
+                    
+                });
+                if(isdraw){
+                    console.log(`${msg}`);
+                    running=false;
+                }
+                if (roundWon){
+                    console.log(`${msg} player ${activePlayer.name} won`);
+                    running=false;
+                }
+               else{
+               switchPlayerTurn();
+               }
+               return roundWon;
+            }
+        
+            
+    return {running,getActivePlayer,play,game_board,printPlayRound,setActivePlayer,switchPlayerTurn};
 
  }
 
-  const updateScreen = function(){
-    let cells=document.querySelectorAll(".cell");
-    let game_board=gameBoard.getboard();
-    let row,col;
-        game_board.board.forEach((element,rowIndex,arr)=>{
-            cells.forEach(cell=>{
-                row=cell.dataset.row;
-                col=cell.dataset.column;
-                cell.textContent=`${arr[row][col]}`;
-                cell.addEventListener('click',handleClickListener);
-              });
-            });
  
-  }
+
   const displayController=function(){
        let game=Game();
        game.printPlayRound();
-       let board=gameBoard.getboard();
        let boardDiv=document.querySelector(".board");
+       let playerTurnText=document.querySelector('.turn');
+       let resetBtn=document.querySelector('.restart');
        let boardRow,cell;
-       board.board.forEach((element,rowIndex,arr)=>{
+      
+       
+       const updateScreen = function(){
+        boardDiv.textContent="";
+        if(!running && !isdraw){
+            playerTurnText.textContent=`Player ${activePlayer.name} won`;
+            return;
+            
+        }
+        if(isdraw){
+            playerTurnText.textContent=`It's a draw`;
+            return;
+
+        }
+       
+        let board=gameBoard.board;
+        resetBtn.addEventListener('click',resetClickHandler);
+        playerTurnText.textContent=activePlayer.name;
+      
+        board.forEach((element,rowIndex,arr)=>{
+            
             boardRow=document.createElement('div');
             boardRow.classList.add('row');
             boardDiv.appendChild(boardRow);
@@ -111,14 +153,22 @@ const gameBoard=(function(){
                  cell.addEventListener('click',handleClickListener);
             });
        });
-       
-
+              
+      }
+      
+      const handleClickListener=function(e){
+        let game=Game();
+        let row=e.target.dataset.row;
+        let col=e.target.dataset.column;
+        game.play(row,col);
+        updateScreen();
+      }
+      const resetClickHandler=function(){
+       location.reload();
+      }
+      
+      updateScreen();
   }
 
-  const handleClickListener=function(e){
-    let game=Game();
-    let row=e.target.dataset.row;
-    let col=e.target.dataset.column;
-    game.play(row,col);  
-  }
+ 
   displayController();
